@@ -1,6 +1,6 @@
 
 {
-  "name": "ProSport Tracker",
-  "description": "A comprehensive mobile-first sports activity tracker with local persistence, cloud backup simulations, and Excel export capabilities.",
+  "name": "Sports Tracker Pro",
+  "description": "A high-performance sports activity tracker designed for iPhone. Log your runs, cycles, swims and more with detailed metrics and Excel export capabilities.",
   "requestFramePermissions": []
 }

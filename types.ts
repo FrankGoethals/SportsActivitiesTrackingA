@@ -1,20 +1,20 @@
 
 export enum ActivityType {
-  RUN = 'Run',
-  CYCLING = 'Cycling',
-  BODYPUMP = 'Bodypump',
-  HYROX = 'Hyrox',
-  SWIM = 'Swim',
-  OTHER = 'Other'
+  Run = 'Run',
+  Cycling = 'Cycling',
+  Bodypump = 'Bodypump',
+  Hyrox = 'Hyrox',
+  Swim = 'Swim',
+  Other = 'Other'
 }
 
-export const ActivityTypeCodes: Record<ActivityType, string> = {
-  [ActivityType.RUN]: 'R',
-  [ActivityType.CYCLING]: 'C',
-  [ActivityType.BODYPUMP]: 'B',
-  [ActivityType.HYROX]: 'H',
-  [ActivityType.SWIM]: 'S',
-  [ActivityType.OTHER]: 'O'
+export const ActivityTypeShort: Record<ActivityType, string> = {
+  [ActivityType.Run]: 'R',
+  [ActivityType.Cycling]: 'C',
+  [ActivityType.Bodypump]: 'B',
+  [ActivityType.Hyrox]: 'H',
+  [ActivityType.Swim]: 'S',
+  [ActivityType.Other]: 'O',
 };
 
 export interface Duration {
@@ -32,8 +32,4 @@ export interface Activity {
   comments?: string;
 }
 
-export interface ActivityFilters {
-  type: ActivityType | 'All';
-  startDate: string;
-  endDate: string;
-}
+export type Page = 'add' | 'list';

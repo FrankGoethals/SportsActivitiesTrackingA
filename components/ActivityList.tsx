@@ -1,8 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
-import { Activity, ActivityType, ActivityTypeCodes, ActivityFilters } from '../types';
-import { ACTIVITY_TYPES } from '../constants';
-import { formatDuration, getCurrentYear } from '../utils/formatters';
+import { Activity, ActivityType, ActivityTypeShort } from '../types';
+import { formatDuration, getCurrentYearRange } from '../utils';
 
 interface ActivityListProps {
   activities: Activity[];
@@ -10,123 +9,148 @@ interface ActivityListProps {
 }
 
 const ActivityList: React.FC<ActivityListProps> = ({ activities, onEdit }) => {
-  const currentYear = getCurrentYear();
-  const [filters, setFilters] = useState<ActivityFilters>({
-    type: 'All',
-    startDate: `${currentYear}-01-01`,
-    endDate: `${currentYear}-12-31`
-  });
+  const { start: defaultStart, end: defaultEnd } = getCurrentYearRange();
+  
+  const [filterType, setFilterType] = useState<ActivityType | 'All'>('All');
+  const [dateStart, setDateStart] = useState(defaultStart);
+  const [dateEnd, setDateEnd] = useState(defaultEnd);
 
   const filteredActivities = useMemo(() => {
     return activities
       .filter(a => {
-        const matchesType = filters.type === 'All' || a.type === filters.type;
-        const matchesDate = a.date >= filters.startDate && a.date <= filters.endDate;
+        const matchesType = filterType === 'All' || a.type === filterType;
+        const matchesDate = a.date >= dateStart && a.date <= dateEnd;
         return matchesType && matchesDate;
       })
-      .sort((a, b) => b.date.localeCompare(a.date));
-  }, [activities, filters]);
+      .sort((a, b) => b.date.localeCompare(a.date)); // Newest first
+  }, [activities, filterType, dateStart, dateEnd]);
 
-  const stats = useMemo(() => {
+  const summary = useMemo(() => {
     const counts: Record<string, number> = {};
-    ACTIVITY_TYPES.forEach(t => counts[t] = 0);
-    filteredActivities.forEach(a => counts[a.type]++);
-    return counts;
+    filteredActivities.forEach(a => {
+      counts[a.type] = (counts[a.type] || 0) + 1;
+    });
+    return {
+      total: filteredActivities.length,
+      counts
+    };
   }, [filteredActivities]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Filters */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
-        <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Filters</h3>
+      <div className="bg-white rounded-2xl shadow-sm p-4 space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2">
-            <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Activity Type</label>
-            <select
-              value={filters.type}
-              onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value as any }))}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm outline-none"
-            >
-              <option value="All">All Activities</option>
-              {ACTIVITY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">From</label>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">From</label>
             <input
               type="date"
-              value={filters.startDate}
-              onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm outline-none"
+              value={dateStart}
+              onChange={(e) => setDateStart(e.target.value)}
+              className="w-full text-sm bg-gray-50 border-none rounded-lg py-2 px-2"
             />
           </div>
-          <div>
-            <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">To</label>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">To</label>
             <input
               type="date"
-              value={filters.endDate}
-              onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm outline-none"
+              value={dateEnd}
+              onChange={(e) => setDateEnd(e.target.value)}
+              className="w-full text-sm bg-gray-50 border-none rounded-lg py-2 px-2"
             />
           </div>
         </div>
+        
+        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+          <button
+            onClick={() => setFilterType('All')}
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border ${
+              filterType === 'All' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-500'
+            }`}
+          >
+            All
+          </button>
+          {Object.values(ActivityType).map(t => (
+            <button
+              key={t}
+              onClick={() => setFilterType(t)}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border ${
+                filterType === t ? 'bg-blue-600 border-blue-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-500'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* List Items */}
-      <div className="space-y-2">
+      {/* List */}
+      <div className="space-y-3">
         {filteredActivities.length === 0 ? (
-          <div className="py-12 text-center text-slate-400 font-medium">No activities found for this period.</div>
+          <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-300">
+            <p className="text-gray-400 text-sm">No activities found for this period.</p>
+          </div>
         ) : (
-          filteredActivities.map(a => (
-            <button
-              key={a.id}
-              onClick={() => onEdit(a)}
-              className="w-full flex items-center bg-white p-3 rounded-xl border border-slate-200 hover:border-blue-300 active:scale-[0.98] transition-all gap-4 text-left shadow-sm"
+          filteredActivities.map(activity => (
+            <div
+              key={activity.id}
+              onClick={() => onEdit(activity)}
+              className="bg-white p-4 rounded-2xl shadow-sm flex items-center gap-4 active:bg-gray-50 transition-colors"
             >
-              <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg shrink-0">
-                {ActivityTypeCodes[a.type]}
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${
+                activity.type === ActivityType.Run ? 'bg-orange-100 text-orange-600' :
+                activity.type === ActivityType.Cycling ? 'bg-blue-100 text-blue-600' :
+                activity.type === ActivityType.Swim ? 'bg-cyan-100 text-cyan-600' :
+                activity.type === ActivityType.Bodypump ? 'bg-red-100 text-red-600' :
+                'bg-gray-100 text-gray-600'
+              }`}>
+                {ActivityTypeShort[activity.type]}
               </div>
-              <div className="flex-1 overflow-hidden">
-                <div className="flex justify-between items-baseline mb-0.5">
-                  <span className="font-bold text-slate-800 text-sm">{a.type}</span>
-                  <span className="text-[10px] text-slate-400 font-medium">{a.date}</span>
+              
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-start mb-0.5">
+                  <h3 className="font-bold text-gray-900 truncate">{activity.type}</h3>
+                  <span className="text-xs text-gray-400 tabular-nums">{activity.date}</span>
                 </div>
-                <div className="flex gap-3 text-xs text-slate-500 font-medium">
-                  <span>{formatDuration(a.duration)}</span>
-                  <span>•</span>
-                  <span>{a.distance?.toFixed(1) || '0.0'} km</span>
+                <div className="flex gap-3 text-xs font-medium text-gray-500">
+                  <span className="bg-gray-100 px-2 py-0.5 rounded-md tabular-nums">{formatDuration(activity.duration)}</span>
+                  {activity.distance && (
+                    <span className="bg-gray-100 px-2 py-0.5 rounded-md tabular-nums">{activity.distance.toFixed(1)} km</span>
+                  )}
                 </div>
-                {a.comments && (
-                  <p className="text-[10px] text-slate-400 mt-1 truncate max-w-[150px]">
-                    {a.comments.slice(0, 10)}{a.comments.length > 10 ? '...' : ''}
+                {activity.comments && (
+                  <p className="mt-1.5 text-xs text-gray-400 truncate italic">
+                    {activity.comments.length > 10 ? activity.comments.substring(0, 10) + '...' : activity.comments}
                   </p>
                 )}
               </div>
-              <div className="text-slate-300">
-                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                 </svg>
+              
+              <div className="text-gray-300">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
               </div>
-            </button>
+            </div>
           ))
         )}
       </div>
 
-      {/* Stats Summary Sticky Bottom */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-xl mx-auto bg-white border-t border-slate-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40">
-        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-            {ACTIVITY_TYPES.map(t => (
-                <div key={t} className="flex flex-col items-center bg-slate-50 rounded-lg py-1 border border-slate-100">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase leading-tight">{ActivityTypeCodes[t]}</span>
-                    <span className="text-xs font-bold text-blue-600">{stats[t]}</span>
-                </div>
+      {/* Summary Stats */}
+      {filteredActivities.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm p-5 border border-blue-50">
+          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Summary Statistics</h4>
+          <div className="grid grid-cols-2 gap-4">
+            {Object.entries(summary.counts).map(([type, count]) => (
+              <div key={type} className="flex justify-between items-center pb-2 border-b border-gray-50">
+                <span className="text-sm font-medium text-gray-600">{type}</span>
+                <span className="text-sm font-bold text-blue-600">{count}</span>
+              </div>
             ))}
-            <div className="flex flex-col items-center bg-blue-600 rounded-lg py-1 col-span-1 shadow-sm">
-                <span className="text-[9px] font-bold text-blue-100 uppercase leading-tight">Total</span>
-                <span className="text-xs font-bold text-white">{filteredActivities.length}</span>
+            <div className="col-span-2 flex justify-between items-center pt-2 mt-2">
+              <span className="text-base font-bold text-gray-900">Grand Total</span>
+              <span className="text-lg font-black text-blue-600 underline decoration-2 underline-offset-4">{summary.total}</span>
             </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
