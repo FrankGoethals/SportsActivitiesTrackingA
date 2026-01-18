@@ -1,0 +1,6 @@
+
+{
+  "name": "ProSport Tracker",
+  "description": "A comprehensive mobile-first sports activity tracker with local persistence, cloud backup simulations, and Excel export capabilities.",
+  "requestFramePermissions": []
+}
